@@ -3,6 +3,7 @@ const ejs = require('ejs');
 const bodyParser = require('body-parser');
 const express = require("express");
 const mongoose = require('mongoose');
+var encrypt = require('mongoose-encryption');
 
 
 mongoose.connect('mongodb://localhost:27017/userDB' , {useNewUrlParser: true, useUnifiedTopology: true});
@@ -17,6 +18,10 @@ const userSchema = new mongoose.Schema({
   email : String,
   password : String
 });
+
+var secret = "Theonlysecretuneedtoknow";
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
+
 
 const User = mongoose.model('User' , userSchema);
 
@@ -67,6 +72,7 @@ app.post('/login' , function(req , res)
   {
     if(foundUser)
     {
+      console.log(foundUser.password);
       if(foundUser.password === userPassword) res.render('secrets');
       else console.log("Wrong Password!!");
     }
