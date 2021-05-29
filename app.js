@@ -5,7 +5,9 @@ const bodyParser = require('body-parser');
 const express = require("express");
 const mongoose = require('mongoose');
 const encrypt = require('mongoose-encryption');
-const md5 = require('md5');
+//const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 
 mongoose.connect('mongodb://localhost:27017/userDB' , {useNewUrlParser: true, useUnifiedTopology: true});
@@ -47,26 +49,33 @@ app.get('/login' , function(req , res)
 
 app.post('/register' , function(req , res)
 {
-  const userEmail = req.body.username;
-  const userPassword = md5(req.body.password);
 
-  const newUser = new User({
-    email : userEmail,
-    password : userPassword
+
+  bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+    // Store hash in your password DB.
+    const userEmail = req.body.username;
+    const userPassword = hash;
+
+    const newUser = new User({
+      email : userEmail,
+      password : userPassword
+    });
+
+    newUser.save(function(err)
+  {
+    if(!err) res.render('secrets');
+    else console.log(err);
   });
-
-  newUser.save(function(err)
-{
-  if(!err) res.render('secrets');
-  else console.log(err);
 });
+
 });
 
 
 app.post('/login' , function(req , res)
 {
   const userEmail = req.body.username;
-  const userPassword = md5(req.body.password);
+  const userPassword = req.body.password;
+
 
   User.findOne({email : userEmail} , function(err , foundUser)
 {
@@ -74,9 +83,10 @@ app.post('/login' , function(req , res)
   {
     if(foundUser)
     {
-      console.log(foundUser.password);
-      if(foundUser.password === userPassword) res.render('secrets');
-      else console.log("Wrong Password!!");
+      bcrypt.compare(userPassword, foundUser.password, function(err, result) {
+        if(result == true) res.render('secrets');
+              else console.log("Wrong Password!!");
+       });
     }
     else console.log("User not found! First register yourself");
   }
